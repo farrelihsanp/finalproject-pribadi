@@ -16,6 +16,10 @@ app.get("/api/v1/status", (_req: Request, res: Response) => {
 
 app.get("/", (req, res) => {});
 
+app.get("/", (req, res) => {});
+
+app.get("/", (req, res) => {});
+
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
