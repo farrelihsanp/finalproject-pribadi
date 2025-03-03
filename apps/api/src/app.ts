@@ -14,6 +14,8 @@ app.get("/api/v1/status", (_req: Request, res: Response) => {
   res.status(200).json({ message: "API is running" });
 });
 
+app.get("/", (req, res) => {});
+
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
