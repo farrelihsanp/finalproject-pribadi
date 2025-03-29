@@ -1,25 +1,321 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("SUPABASE_DATABASE_URL")
-  directUrl = env("SUPABASE_DIRECT_URL")
+    provider  = "postgresql"
+    url       = env("SUPABASE_DATABASE_URL")
+    directUrl = env("SUPABASE_DIRECT_URL")
 }
 
-model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  password     String
-  profileImage String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+/**
+ * ENUM
+ */
+
+enum Role {
+    CUSTOMERS
+    SUPERADMIN
+    STOREADMIN
+    UNSET
 }
+
+enum DiscountType {
+    AMOUNT
+    PERCENTAGE
+    BUY_1_GET_1
+}
+
+enum TransactionStatus {
+    PENDING_PAYMENT
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    COMPLETED
+    CANCELLED
+}
+
+enum PaymentStatus {
+    PENDING
+    PAID
+    FAILED
+}
+
+// MODEL
+
+model User {
+    id             Int      @id @default(autoincrement())
+    name           String
+    username       String   @unique
+    password       String
+    email          String   @unique
+    emailConfirmed Boolean  @default(false)
+    role           Role
+    profileImage   String
+    referralNumber String   @unique
+    walletBalance  Int      @default(0)
+    Cart           Cart?
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    // ONE TO MANY
+    Referral     Referral[]
+    Voucher      Voucher[]
+    ConfirmToken ConfirmToken[]
+    Product      Product[]
+    Transaction  Transaction[]
+
+    // MANY TO MANY
+    userAndStore   UserAndStore[]
+    userAndProduct UserAndProduct[]
+    Order          Order[]
+}
+
+model Product {
+    id Int @id @default(autoincrement())
+
+    userId  Int?
+    storeId Int
+    cartId  Int
+
+    name         String
+    excerpt      String
+    description  String
+    date         DateTime
+    price        Decimal
+    productImage String
+    slug         String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // ONE TO MANY
+    Transaction Transaction[]
+    Voucher     Voucher[]
+
+    // MANY TO MANY
+    CategoryProduct CategoryProduct[]
+    userAndProduct  UserAndProduct[]
+
+    user      User?       @relation(fields: [userId], references: [id])
+    cart      Cart        @relation(fields: [cartId], references: [id])
+    OrderItem OrderItem[]
+}
+
+model Category {
+    id          Int      @id @default(autoincrement())
+    name        String
+    excerpt     String
+    description String
+    image       String
+    slug        String
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // MANY TO MANY
+    CategoryProduct CategoryProduct[]
+}
+
+model Referral {
+    id             Int      @id @default(autoincrement())
+    referredById   Int
+    referredUserId Int
+    createdAt      DateTime @default(now())
+
+    referredBy User @relation(fields: [referredById], references: [id], onDelete: Cascade)
+}
+
+model ConfirmToken {
+    id          Int      @id @default(autoincrement())
+    userId      Int
+    token       String
+    expiredDate DateTime
+    used        Boolean  @default(false)
+    createdAt   DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Store {
+    id Int @id @default(autoincrement())
+
+    name        String
+    storeImage  String
+    address     String
+    city        String
+    province    String
+    country     String
+    postalCode  String
+    phoneNumber String
+    slug        String
+
+    latitude  Float
+    longitude Float
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // ONE TO MANY
+    Transaction Transaction[]
+    Voucher     Voucher[]
+
+    // MANY TO MANY
+    userAndStore   UserAndStore[]
+    UserAndProduct UserAndProduct[]
+    Order          Order[]
+}
+
+model Voucher {
+    id Int @id @default(autoincrement())
+
+    userId    Int?
+    productId Int?
+    storeId   Int?
+
+    name             String
+    description      String?
+    code             String       @unique
+    discountType     DiscountType
+    discountRate     Int
+    startDate        DateTime
+    endDate          DateTime
+    stock            Int
+    isActive         Boolean      @default(true)
+    minPurchase      Float?
+    maxDiscountValue Float?
+
+    expiredAt DateTime
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    product Product? @relation(fields: [productId], references: [id])
+    store   Store?   @relation(fields: [storeId], references: [id])
+    user    User?    @relation(fields: [userId], references: [id])
+}
+
+model Transaction {
+    id Int @id @default(autoincrement())
+
+    userId    Int
+    productId Int
+    storeId   Int
+
+    TransactionStatus TransactionStatus
+    PaymentStatus     PaymentStatus
+
+    amount    Decimal  @default(0.0)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    User    User    @relation(fields: [userId], references: [id])
+    product Product @relation(fields: [productId], references: [id])
+    store   Store   @relation(fields: [storeId], references: [id])
+}
+
+model Cart {
+    id Int @id @default(autoincrement())
+
+    userId Int @unique
+
+    quantity  Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // ONE TO MANY
+    Product Product[]
+
+    User User @relation(fields: [userId], references: [id])
+}
+
+// MODE MANY TO MANY
+
+model CategoryProduct {
+    id         Int @id @default(autoincrement())
+    productId  Int
+    categoryId Int
+
+    Product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    Category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model UserAndStore {
+    id      Int @id @default(autoincrement())
+    userId  Int
+    StoreId Int
+
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    store Store @relation(fields: [StoreId], references: [id], onDelete: Cascade)
+}
+
+model UserAndProduct {
+    id        Int @id @default(autoincrement())
+    userId    Int
+    ProductId Int
+
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    store     Store    @relation(fields: [ProductId], references: [id], onDelete: Cascade)
+    Product   Product? @relation(fields: [productId], references: [id])
+    productId Int?
+}
+
+// ---
+
+/**
+ * ------------------------------------ CART -----------------------------------
+ */
+
+/**
+ * ------------------------------------ - -----------------------------------
+ */
+
+/**
+ * ------------------------------------ ORDER -----------------------------------
+ */
+// model Order {
+//     id               String        @id @default(uuid())
+//     userId           String
+//     orderNumber      String        @unique
+//     storeId          String
+//     addressId        String
+//     status           OrderStatus
+//     paymentMethod    String
+//     paymentStatus    PaymentStatus
+//     paymentProof     String?
+//     paymentProofTime DateTime?
+//     shippingMethod   String
+//     shippingCost     Float
+//     subtotal         Float
+//     discountTotal    Float         @default(0)
+//     total            Float
+//     notes            String?
+//     shippedAt        DateTime?
+//     deliveredAt      DateTime?
+//     cancelledAt      DateTime?
+//     createdAt        DateTime      @default(now())
+//     updatedAt        DateTime      @updatedAt
+
+//     // Relations
+//     user  User        @relation(fields: [userId], references: [id])
+//     store Store       @relation(fields: [storeId], references: [id])
+//     items OrderItem[]
+// }
+
+// model OrderItem {
+//     id             String   @id @default(uuid())
+//     orderId        String
+//     productId      String
+//     quantity       Int
+//     price          Float
+//     discountAmount Float    @default(0)
+//     subtotal       Float
+//     createdAt      DateTime @default(now())
+//     updatedAt      DateTime @updatedAt
+
+//     // Relations
+//     order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+//     product Product @relation(fields: [productId], references: [id])
+// }
+
+/**
+ * ------------------------------------ - -----------------------------------
+ */
