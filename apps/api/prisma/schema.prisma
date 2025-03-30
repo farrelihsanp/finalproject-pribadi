@@ -391,4 +391,12 @@ model walletTransaction {
     updatedAt DateTime @updatedAt
 }
 
+model walletHistory {
+    id        Int      @id @default(autoincrement())
+    userId    Int
+    storeId   Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
 // ---
