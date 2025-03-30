@@ -375,6 +375,7 @@ model VoucherProduct {
     updatedAt DateTime @updatedAt
 }
 
+// MODEL MENCOBA
 model wallet {
     id        Int      @id @default(autoincrement())
     userId    Int
@@ -399,4 +400,10 @@ model walletHistory {
     updatedAt DateTime @updatedAt
 }
 
-// ---
+model walletHistoryTransaction {
+    id        Int      @id @default(autoincrement())
+    userId    Int
+    storeId   Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
