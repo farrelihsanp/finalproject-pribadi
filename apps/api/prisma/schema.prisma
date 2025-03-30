@@ -375,4 +375,12 @@ model VoucherProduct {
     updatedAt DateTime @updatedAt
 }
 
+model wallet {
+    id        Int      @id @default(autoincrement())
+    userId    Int
+    storeId   Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
 // ---
