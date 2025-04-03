@@ -76,7 +76,7 @@ export default function Navbar() {
       <div className="mx-3">
         <Link href="/">
           <Image
-            src="https://res.cloudinary.com/dm1cnsldc/image/upload/v1741129248/LOGO-NEW_ylnnp9.png"
+            src="https://res.cloudinary.com/dm1cnsldc/image/upload/v1739627004/automobile_gm4zkr.jpg"
             width={200}
             height={200}
             alt="Landing Page Photo"

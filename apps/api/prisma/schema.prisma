@@ -8,10 +8,6 @@ datasource db {
     directUrl = env("SUPABASE_DIRECT_URL")
 }
 
-/**
- * ENUM
- */
-
 enum Role {
     CUSTOMERS
     SUPERADMIN
@@ -31,8 +27,9 @@ enum VoucherType {
 }
 
 enum OrderStatus {
+    WAITING_FOR_PAYMENT
     PENDING_PAYMENT
-    FAILED
+    PAYMENT_DECLINED
     PAID
     PROCESSING
     SHIPPED
@@ -54,71 +51,67 @@ enum Provider {
     CREDENTIALS
 }
 
-// MODEL
+enum typeOfChange {
+    PENAMBAHAN
+    PEMBELIAN
+}
 
 model User {
-    id Int @id @default(autoincrement())
+    id                  Int      @id @default(autoincrement())
+    name                String
+    username            String   @unique
+    password            String
+    email               String   @unique
+    emailConfirmed      Boolean  @default(false)
+    role                Role
+    profileImage        String
+    referralNumber      String   @unique
+    createdAt           DateTime @default(now())
+    updatedAt           DateTime @updatedAt
+    referralCount       Int      @default(0)
+    provider            Provider
+    isVerified          Boolean  @default(false)
+    proofOfPaymentImage String?
 
-    name           String
-    username       String   @unique
-    password       String
-    email          String   @unique
-    emailConfirmed Boolean  @default(false)
-    role           Role
-    profileImage   String
-    referralNumber String   @unique
-    createdAt      DateTime @default(now())
-    updatedAt      DateTime @updatedAt
-    referralCount  Int      @default(0)
-    provider       Provider
-    isVerified     Boolean  @default(false)
-    Cart           Cart?
-
-    // ONE TO MANY
-    Referral     Referral[]
-    ConfirmToken ConfirmToken[]
-    Addresses    Address[]
-    orders       Order[]
-
-    // MANY TO MANY
-    StoreUser   StoreUser[]
-    VoucherUser VoucherUser[]
+    Cart              Cart?
+    Referral          Referral[]
+    ConfirmToken      ConfirmToken[]
+    Addresses         Address[]
+    orders            Order[]
+    StoreUser         StoreUser[]
+    VoucherUser       VoucherUser[]
+    ProductChangeData ProductChangeData[]
+    discountReport    DiscountReport[]
 }
 
 model Cart {
-    id Int @id @default(autoincrement())
-
-    userId Int @unique
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    cartItems    CartItem[]
-    ShippingCost ShippingCost[]
-    user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id        Int        @id @default(autoincrement())
+    userId    Int        @unique
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+    cartItems CartItem[]
+    user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CartItem {
-    id        Int @id @default(autoincrement())
-    cartId    Int
-    productId Int
+    id             Int      @id @default(autoincrement())
+    cartId         Int
+    storeProductId Int
+    quantity       Int
+    price          Decimal
+    total          Int
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
 
-    quantity Int
-    price    Decimal
-    total    Int
-
-    cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    cart         Cart         @relation(fields: [cartId], references: [id], onDelete: Cascade)
+    storeProduct StoreProduct @relation(fields: [storeProductId], references: [id], onDelete: Cascade)
+    Product      Product?     @relation(fields: [productId], references: [id])
+    productId    Int?
 }
 
 model Address {
-    id Int @id @default(autoincrement())
-
-    userId Int
-
+    id         Int      @id @default(autoincrement())
+    userId     Int
     street     String
     city       String
     postalCode Int
@@ -134,32 +127,23 @@ model Address {
 }
 
 model Product {
-    id Int @id @default(autoincrement())
-
-    storeId Int
-
+    id          Int      @id @default(autoincrement())
     name        String
     excerpt     String
     description String
-    date        DateTime
-    price       Decimal
     slug        String
-    stock       Int
-    isCheap     Boolean  @default(false)
     weight      Float
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-    // ONE TO MANY
-    ordersItems OrderItem[]
-
-    // MANY TO MANY
-    CategoryProduct CategoryProduct[]
-    CartItem        CartItem[]
-    ProductImages   ProductImage[]
-    VoucherProduct  VoucherProduct[]
+    storeProducts     StoreProduct[]
+    CategoryProduct   CategoryProduct[]
+    CartItem          CartItem[]
+    ProductImages     ProductImage[]
+    VoucherProduct    VoucherProduct[]
+    ordersItems       OrderItem[]
+    ProductChangeData ProductChangeData[]
+    DiscountProduct   DiscountProduct[]
 }
 
 model ProductImage {
@@ -171,10 +155,7 @@ model ProductImage {
 }
 
 model Category {
-    id Int @id @default(autoincrement())
-
-    storeId Int
-
+    id          Int      @id @default(autoincrement())
     name        String
     excerpt     String
     description String
@@ -183,10 +164,6 @@ model Category {
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
-    // ONE TO MANY  
-    Store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-    // MANY TO MANY
     CategoryProduct CategoryProduct[]
 }
 
@@ -211,8 +188,7 @@ model ConfirmToken {
 }
 
 model Store {
-    id Int @id @default(autoincrement())
-
+    id                 Int      @id @default(autoincrement())
     name               String
     storeImage         String
     address            String
@@ -225,27 +201,21 @@ model Store {
     latitude           Float
     longitude          Float
     maxServiceDistance Float?
+    isPrimary          Boolean  @default(false)
+    isActive           Boolean  @default(true)
+    createdAt          DateTime @default(now())
+    updatedAt          DateTime @updatedAt
 
-    isActive  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    // ONE TO MANY
-    Voucher  Voucher[]
-    products Product[]
-    orders   Order[]
-
-    // MANY TO MANY
-    StoreUser StoreUser[]
-    Category  Category[]
+    Voucher       Voucher[]
+    orders        Order[]
+    StoreUser     StoreUser[]
+    storeProducts StoreProduct[]
 }
 
 model Voucher {
-    id Int @id @default(autoincrement())
-
-    userId  Int
-    storeId Int?
-
+    id                Int         @id @default(autoincrement())
+    userId            Int
+    storeId           Int?
     name              String
     description       String
     code              String      @unique
@@ -258,35 +228,21 @@ model Voucher {
     minPurchase       Float?
     maxPriceReduction Float?
     voucherImage      String
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt         DateTime    @default(now())
+    updatedAt         DateTime    @updatedAt
 
     store          Store?           @relation(fields: [storeId], references: [id], onDelete: Cascade)
     VoucherProduct VoucherProduct[]
     VoucherUser    VoucherUser[]
 }
 
-model VoucherUser {
-    id         Int      @id @default(autoincrement())
-    voucherId  Int
-    customerId Int
-    claimedAt  DateTime @default(now())
-
-    voucher  Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
-    customer User    @relation(fields: [customerId], references: [id], onDelete: Cascade)
-}
-
 model Order {
-    id Int @id @default(autoincrement())
-
-    userId            Int
-    storeId           Int
-    shippingAddressId Int
-
+    id                     Int               @id @default(autoincrement())
+    userId                 Int
+    storeId                Int
+    shippingAddressId      Int
     slug                   String
     paymentMethodType      PaymentMethodType
-    shippingCost           Float
     totalAmount            Float
     status                 OrderStatus       @default(PENDING_PAYMENT)
     paymentProof           String?           @unique
@@ -294,43 +250,94 @@ model Order {
     orderConfirmationAt    DateTime?
     createdAt              DateTime          @default(now())
     updatedAt              DateTime          @updatedAt
+    shippingAt             DateTime?
+    deliveredAt            DateTime?
 
-    user            User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    shippingAddress Address     @relation(fields: [shippingAddressId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    store           Store       @relation(fields: [storeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    orderItems      OrderItem[]
+    user              User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    shippingAddress   Address             @relation(fields: [shippingAddressId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    store             Store               @relation(fields: [storeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    orderItems        OrderItem[]
+    shippingCost      ShippingCost?
+    ProductChangeData ProductChangeData[]
 }
 
 model OrderItem {
-    id Int @id @default(autoincrement())
+    id             Int   @id @default(autoincrement())
+    orderId        Int
+    storeProductId Int
+    quantity       Int
+    price          Float
+    total          Float
 
-    productId Int
-    orderId   Int
-
-    quantity Int
-    price    Float
-    total    Float
-
-    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    storeProduct StoreProduct @relation(fields: [storeProductId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    Product      Product?     @relation(fields: [productId], references: [id])
+    productId    Int?
 }
 
 model ShippingCost {
-    id Int @id @default(autoincrement())
-
-    cartId Int
-
+    id            Int      @id @default(autoincrement())
+    orderId       Int      @unique
     courierName   String
     code          String
     serviceType   String
     description   String
     shippingCost  Float
-    estimatedTime String
+    estimatedTime Int
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model ProductChangeData {
+    id Int @id @default(autoincrement())
+
+    orderId   Int?
+    userId    Int
+    productId Int
+
+    stock        Int
+    lastStock    Int
+    typeOfChange typeOfChange
+
+    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+
+    order   Order?  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    User    User    @relation(fields: [userId], references: [id])
+    product Product @relation(fields: [productId], references: [id])
+}
+
+model Discount {
+    id Int @id @default(autoincrement())
+
+    type        DiscountType
+    name        String
+    value       Int
+    minPurchase Float
+    maxDiscount Float
+    expiredAt   DateTime
+    isActive    Boolean      @default(true)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    DiscountProduct DiscountProduct[]
+    DiscountReport  DiscountReport[]
+}
+
+model DiscountReport {
+    id Int @id @default(autoincrement())
+
+    discountId Int
+    userId     Int
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    User     User     @relation(fields: [userId], references: [id])
 }
 
 /**
@@ -342,6 +349,19 @@ model ShippingCost {
 /**
  * --------------------------------------------------------------------------
  */
+
+model DiscountProduct {
+    id Int @id @default(autoincrement())
+
+    productId  Int
+    discountId Int
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    Product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    Discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
 
 model CategoryProduct {
     id         Int @id @default(autoincrement())
@@ -364,31 +384,40 @@ model StoreUser {
 }
 
 model VoucherProduct {
-    id        Int @id @default(autoincrement())
+    id        Int      @id @default(autoincrement())
     voucherId Int
     productId Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
     product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
 }
 
-// MODEL MENCOBA
-model wallet {
-    id        Int      @id @default(autoincrement())
-    userId    Int
+model StoreProduct {
+    id Int @id @default(autoincrement())
+
     storeId   Int
+    productId Int
+
+    stock     Int      @default(0)
+    price     Decimal
+    isCheap   Boolean  @default(false)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    store     Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+    product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+    CartItem  CartItem[]
+    OrderItem OrderItem[]
 }
 
+model VoucherUser {
+    id         Int      @id @default(autoincrement())
+    voucherId  Int
+    customerId Int
+    claimedAt  DateTime @default(now())
 
-model viakomputer {
-    id        Int      @id @default(autoincrement())
-    userId    Int
-    storeId   Int
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    voucher  Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+    customer User    @relation(fields: [customerId], references: [id], onDelete: Cascade)
 }

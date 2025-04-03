@@ -11,12 +11,3 @@ export function calculateDistance(
     { latitude: lat2, longitude: lon2 },
   );
 }
-
-console.log(
-  calculateDistance(
-    -6.289169504340975,
-    106.83223534481418,
-    -6.260141963529325,
-    106.81227233555877,
-  ),
-);

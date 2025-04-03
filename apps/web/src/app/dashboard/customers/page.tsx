@@ -10,7 +10,6 @@ export default function HomeCustomers() {
     <section>
       <Navbar />
       <SearchBar />
-      {/* <Location /> */}
       <Hero />
       <LandingCategory />
       <LandingProduct />

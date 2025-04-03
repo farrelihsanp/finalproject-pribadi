@@ -49,7 +49,7 @@ export default function LoginPage() {
 
       switch (meData.role) {
         case 'CUSTOMERS':
-          router.push('/dashboard/customers');
+          router.push('/');
           break;
         case 'SUPERADMIN':
           router.push('/dashboard/superadmin');

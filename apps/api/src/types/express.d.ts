@@ -53,3 +53,16 @@ export interface OrderStatusData {
   transaction_status: string;
   fraudStatus: string;
 }
+
+export interface Product {
+  id: number;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  slug: string;
+  description: string;
+  excerpt: string;
+  date: Date;
+  weight: number;
+  price: number;
+}

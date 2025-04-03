@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import { prisma } from '../configs/prisma.js';
 import { genSalt, hash } from 'bcryptjs';
-import { createUserSchema, updateUserSchema } from '../schemas/auth-schemas.js';
+import cloudinary from '../configs/cloudinary.js';
+import fs from 'node:fs/promises';
+
+import { Role } from '@prisma/client';
+import { StoreAdminSchema } from '../schemas/auth-schemas.js';
 
 // Create Admin
 export const createAdmin = async (
@@ -10,36 +14,70 @@ export const createAdmin = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, email, password, role, username } = req.body;
+    const { name, email, password, username, storeId } = StoreAdminSchema.parse(
+      req.body,
+    );
 
-    // Validate input
-    const parsedInput = createUserSchema.parse({
-      name,
-      email,
-      password,
-      role,
-      username,
+    if (!name || !email || !password || !username || !storeId) {
+      res.status(400).json({ message: 'Missing required fields!' });
+      return;
+    }
+
+    // Validasi storeId
+    const storeExists = await prisma.store.findUnique({
+      where: { id: +storeId },
     });
 
-    // Hash password
+    if (!storeExists) {
+      res.status(404).json({ message: 'Store not found!' });
+      return;
+    }
+
+    let cloudinaryData;
+    const defaultImageUrl =
+      'https://res.cloudinary.com/dm1cnsldc/image/upload/v1743609225/DEFAULT-PP_p5kx9w.jpg';
+
+    if (req.file) {
+      try {
+        cloudinaryData = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'profileimage/images',
+        });
+        await fs.unlink(req.file.path);
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        cloudinaryData = { secure_url: defaultImageUrl };
+      }
+    } else {
+      cloudinaryData = { secure_url: defaultImageUrl };
+    }
+
+    const referralNumber = `REF${Date.now().toString().slice(-3)}`;
+
     const salt = await genSalt(10);
     const hashedPassword = await hash(password, salt);
 
-    // Create admin
     const newAdmin = await prisma.user.create({
       data: {
-        name: parsedInput.name,
-        email: parsedInput.email,
+        name: name,
+        email: email,
         password: hashedPassword,
-        role: parsedInput.role,
-        username: parsedInput.username,
-        referralNumber: 'ADMIN123',
+        role: Role.STOREADMIN,
+        username: username,
+        referralNumber: referralNumber,
         referralCount: 0,
-        profileImage: '',
+        profileImage: cloudinaryData.secure_url,
         provider: 'CREDENTIALS',
       },
     });
-    res.status(201).json(newAdmin);
+
+    await prisma.storeUser.create({
+      data: {
+        userId: newAdmin.id,
+        storeId: +storeId,
+      },
+    });
+
+    res.status(201).json({ ok: true, data: newAdmin });
   } catch (error) {
     next(error);
   }
@@ -52,20 +90,63 @@ export const updateAdmin = async (
   next: NextFunction,
 ) => {
   try {
-    const { id } = req.params;
-    const { name, email, role } = req.body;
+    const { name, email, password, username, storeId } = StoreAdminSchema.parse(
+      req.body,
+    );
 
-    // Validate input
-    const parsedInput = updateUserSchema.parse({ name, email, role });
+    if (!name || !email || !password || !username || !storeId) {
+      res.status(400).json({ message: 'Missing required fields!' });
+      return;
+    }
 
-    // Update admin
+    let cloudinaryData;
+    const defaultImageUrl =
+      'https://res.cloudinary.com/dm1cnsldc/image/upload/v1743609225/DEFAULT-PP_p5kx9w.jpg';
+
+    if (req.file) {
+      try {
+        cloudinaryData = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'profileimage/images',
+        });
+        await fs.unlink(req.file.path);
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        cloudinaryData = { secure_url: defaultImageUrl };
+      }
+    } else {
+      cloudinaryData = { secure_url: defaultImageUrl };
+    }
+
+    const adminId = req.params?.id;
+
+    const salt = await genSalt(10);
+    const hashedPassword = await hash(password, salt);
+
     const updatedAdmin = await prisma.user.update({
-      where: { id: Number(id) },
-      data: parsedInput,
+      where: { id: +adminId },
+      data: {
+        name: name,
+        email: email,
+        password: hashedPassword,
+        username: username,
+        profileImage: cloudinaryData.secure_url,
+        role: Role.STOREADMIN,
+      },
     });
-    res.status(200).json(updatedAdmin);
+
+    const storeUserId = await prisma.storeUser.findFirst({
+      where: { userId: +adminId },
+    });
+
+    if (storeUserId) {
+      await prisma.storeUser.update({
+        where: { id: storeUserId.id },
+        data: { storeId: +storeId },
+      });
+    }
+    res.status(200).json({ ok: true, data: updatedAdmin });
   } catch (error) {
-    next(error); // Pass error to the next middleware
+    next(error);
   }
 };
 
@@ -84,23 +165,31 @@ export const deleteAdmin = async (
     });
     res.status(204).send();
   } catch (error) {
-    next(error); // Pass error to the next middleware
+    next(error);
   }
 };
 
 // Get All Admins
 export const getAllAdmins = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
     const admins = await prisma.user.findMany({
-      where: { role: 'STOREADMIN' }, // Corrected typo from 'STOREDMIN' to 'STOREADMIN'
+      where: { role: 'STOREADMIN' },
     });
-    res.status(200).json(admins);
+
+    res.status(200).json({ ok: true, data: admins });
   } catch (error) {
-    next(error); // Pass error to the next middleware
+    next(error);
   }
 };
 
@@ -112,7 +201,6 @@ export const getAdminById = async (
   try {
     const { id } = req.params;
 
-    // Validate input: Ensure ID is a positive integer
     const adminId = parseInt(id, 10);
     if (isNaN(adminId) || adminId <= 0) {
       res
@@ -121,20 +209,17 @@ export const getAdminById = async (
       return;
     }
 
-    // Fetch admin by ID
     const admin = await prisma.user.findUnique({
       where: { id: adminId },
     });
 
-    // Check if admin exists
     if (!admin) {
       res.status(404).json({ error: 'Admin not found.' });
       return;
     }
 
-    // Return admin data
     res.status(200).json(admin);
   } catch (error) {
-    next(error); // Pass error to the next middleware
+    next(error);
   }
 };

@@ -1,12 +1,15 @@
 import express from 'express';
 import {
   createProduct,
-  deleteProductByStoreAndProductId,
+  deleteProduct,
+  updateProductGlobal,
+  updateProductInSomeStore,
   getDetailProductByIdByStoreId,
   getAllProductsByStoreId,
-  getAllCategoriesByStoreId,
   getAllProductsByCategoryByStoreId,
   getCheapProductsByStoreId,
+  getFilteredProductChanges,
+  getMonthlyProductSummary,
 } from '../controllers/products-controller.js';
 
 import { uploadMany } from '../middlewares/upload-many-middleware.js';
@@ -16,7 +19,7 @@ const router = express.Router();
 
 // Create a new product
 router
-  .route('/create-product/:id')
+  .route('/create-product')
   .post(
     uploadMany.array('productImages', 5),
     verifyToken,
@@ -26,12 +29,16 @@ router
 
 // Delete a product
 router
-  .route('/delete-product/:storeId/:productId')
-  .delete(
-    verifyToken,
-    roleGuard(['SUPERADMIN']),
-    deleteProductByStoreAndProductId,
-  );
+  .route('/delete-product')
+  .delete(verifyToken, roleGuard(['SUPERADMIN']), deleteProduct);
+
+router
+  .route('/update-product')
+  .put(verifyToken, roleGuard(['SUPERADMIN']), updateProductGlobal);
+
+router
+  .route('/update-product-in-store/:id')
+  .put(verifyToken, roleGuard(['SUPERADMIN']), updateProductInSomeStore);
 
 // Get a product by ID
 router
@@ -43,21 +50,7 @@ router
   );
 
 // Get all products by store
-router
-  .route('/products-store/:id')
-  .get(
-    verifyToken,
-    roleGuard(['CUSTOMERS', 'SUPERADMIN', 'STOREADMIN']),
-    getAllProductsByStoreId,
-  );
-
-// get all categories by store
-router
-  .route('/categories-store/:id')
-  .get(
-    roleGuard(['SUPERADMIN', 'STOREADMIN', 'CUSTOMERS']),
-    getAllCategoriesByStoreId,
-  );
+router.route('/products-store/:storeId').get(getAllProductsByStoreId);
 
 // get all products by category
 router
@@ -69,12 +62,14 @@ router
   );
 
 // get all cheap products
-router
-  .route('/cheap-products-store/:id')
-  .get(
-    verifyToken,
-    roleGuard(['CUSTOMERS', 'SUPERADMIN', 'STOREADMIN']),
-    getCheapProductsByStoreId,
-  );
+router.route('/cheap-products-store/:storeId').get(
+  // verifyToken,
+  // roleGuard(['CUSTOMERS', 'SUPERADMIN', 'STOREADMIN']),
+  getCheapProductsByStoreId,
+);
+
+router.get('/product-change-data', getFilteredProductChanges);
+
+router.get('/monthly-product-summary', getMonthlyProductSummary);
 
 export default router;

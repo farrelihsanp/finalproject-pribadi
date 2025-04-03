@@ -112,7 +112,7 @@ export async function completeRegister(
 
     let cloudinaryData;
     const defaultImageUrl =
-      'https://res.cloudinary.com/dm1cnsldc/image/upload/v1739728940/event/images/s6x3zkhiibcahfndhmxe.jpg';
+      'https://res.cloudinary.com/dm1cnsldc/image/upload/v1743609225/DEFAULT-PP_p5kx9w.jpg';
 
     if (req.file) {
       try {
@@ -138,7 +138,7 @@ export async function completeRegister(
     const salt = await genSalt(10);
     const hashedPassword = await hash(password, salt);
 
-    const referralNumber = `${userId}REF${Date.now().toString().slice(-3)}`;
+    const referralNumber = `REF${Date.now().toString().slice(-3)}`;
     await prisma.user.update({
       where: { id: Number(userId) },
       data: { referralNumber },

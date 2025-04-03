@@ -1,19 +1,76 @@
-import multer from 'multer';
-import path from 'node:path';
+import multer, { FileFilterCallback } from 'multer';
+import path, { dirname } from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { Request } from 'express';
 
+// Simulasi __dirname di ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Direktori tujuan upload
+const uploadDir = path.join(__dirname, '../public/images');
+
+// Buat direktori jika belum ada
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Filter file: hanya ekstensi gambar tertentu yang diperbolehkan
+const fileFilter = (
+  _req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback,
+) => {
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif'];
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (allowedExtensions.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Hanya file .jpg, .jpeg, .png, dan .gif yang diperbolehkan.'));
+  }
+};
+
+// Setup multer untuk penyimpanan lokal
 export const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, '/images');
+    destination: (_req, _file, cb) => {
+      cb(null, uploadDir);
     },
-    filename: (req, file, cb) => {
-      const uniquePrefix = `img-${Date.now()}`;
-      cb(null, uniquePrefix + path.extname(file.originalname));
+    filename: (_req, file, cb) => {
+      const uniqueName = `img-${Date.now()}${path.extname(file.originalname)}`;
+      cb(null, uniqueName);
     },
   }),
+  fileFilter,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // Maksimal 25MB
+  },
 });
 
-// BACKUP KODE TERBARU
+/* -------------------------------------------------------------------------- */
+/*                                BACKUP KODE 2                               */
+/* -------------------------------------------------------------------------- */
+
+// import multer from 'multer';
+// import path from 'node:path';
+
+// export const upload = multer({
+//   storage: multer.diskStorage({
+//     destination: (req, file, cb) => {
+//       cb(null, '/images');
+//     },
+//     filename: (req, file, cb) => {
+//       const uniquePrefix = `img-${Date.now()}`;
+//       cb(null, uniquePrefix + path.extname(file.originalname));
+//     },
+//   }),
+// });
+
+/* -------------------------------------------------------------------------- */
+/*                                BACKUP KODE 1                               */
+/* -------------------------------------------------------------------------- */
 
 // import multer from 'multer';
 // import path from 'node:path';

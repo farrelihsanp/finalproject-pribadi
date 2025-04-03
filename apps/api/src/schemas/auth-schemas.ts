@@ -32,24 +32,13 @@ export const resetPasswordSchema = z.object({
 
 // -------
 // Zod Validation Schemas
-export const createUserSchema = z.object({
+export const StoreAdminSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
   role: z.nativeEnum(Role),
-  username: z.string().min(1), // Add this line
-  referralNumber: z.string(), // Add this line
-});
-
-export const updateUserSchema = z.object({
-  name: z.string().optional(),
-  email: z.string().email().optional(),
-  role: z.nativeEnum(Role).optional(),
-});
-
-export const manageUserDataSchema = z.object({
-  action: z.enum(['create', 'update', 'delete']),
-  data: z.union([createUserSchema, updateUserSchema.partial()]),
+  username: z.string().min(1),
+  storeId: z.string().min(1),
 });
 
 // ------

@@ -8,32 +8,45 @@ import {
 } from '../controllers/admin-controller.js';
 
 import { verifyToken, roleGuard } from '../middlewares/auth-middleware.js';
+import { upload } from '../middlewares/upload-middleware.js';
 
 const router = express.Router();
 
 // Route for creating an admin
-router.post('/admins', verifyToken, roleGuard(['SUPERADMINS']), createAdmin);
-
-// Route for getting all admins
-router.get('/admins', verifyToken, roleGuard(['SUPERADMINS']), getAllAdmins);
+router.post(
+  '/create/',
+  upload.single('adminImage'),
+  verifyToken,
+  roleGuard(['SUPERADMIN']),
+  createAdmin,
+);
 
 // Route for updating an admin by ID
-router.put('/admins/:id', verifyToken, roleGuard(['SUPERADMINS']), updateAdmin);
+router.put(
+  '/update/:id',
+  upload.single('adminImage'),
+  verifyToken,
+  roleGuard(['SUPERADMIN']),
+  updateAdmin,
+);
+
+// Route for getting all admins
+router.get(
+  '/getAllAdmins/',
+  verifyToken,
+  roleGuard(['SUPERADMIN']),
+  getAllAdmins,
+);
 
 // Route for deleting an admin by ID
 router.delete(
-  '/admins/:id',
+  '/delete/:id',
   verifyToken,
-  roleGuard(['SUPERADMINS']),
+  roleGuard(['SUPERADMIN']),
   deleteAdmin,
 );
 
 // Route for getting an admin by ID
-router.get(
-  '/admins/:id',
-  verifyToken,
-  roleGuard(['SUPERADMINS']),
-  getAdminById,
-);
+router.get('/:id', verifyToken, roleGuard(['SUPERADMIN']), getAdminById);
 
 export default router;

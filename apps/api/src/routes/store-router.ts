@@ -6,7 +6,7 @@ import {
   deleteStore,
   getStoreById,
   getAllStores,
-  // getNearestStore,
+  getNearestStore,
 } from '../controllers/store-controller.js';
 
 import { upload } from '../middlewares/upload-middleware.js';
@@ -28,12 +28,12 @@ router.put('/:id', upload.single('storeImage'), ...protectedRoute, updateStore);
 router.delete('/:id', ...protectedRoute, deleteStore);
 
 // Get a store by ID
-router.get('/:id', ...protectedRoute, getStoreById);
+router.get('/someStore/:id', getStoreById);
 
 // Get all stores
-router.get('/', ...protectedRoute, getAllStores);
+router.get('/', getAllStores);
 
-// Get nearest store based on user's location
-// router.post('/nearest', getNearestStore);
+// Get Nearest Store
+router.get('/nearest-store', getNearestStore);
 
 export default router;

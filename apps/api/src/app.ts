@@ -19,6 +19,9 @@ import confirmUpdateEmailRouter from './routes/confirm-update-email-router.js';
 import shippingCostRouter from './routes/shipping-cost-router.js';
 import productRouter from './routes/products-router.js';
 import vouchersRouter from './routes/vouchers-router.js';
+import categoriesRouter from './routes/categories-router.js';
+import orderRouter from './routes/orders-router.js';
+import discountRouter from './routes/discounts-router.js';
 
 const app: Application = express();
 const PORT = process.env.PORT || 8000;
@@ -40,13 +43,16 @@ app.use('/api/v1/confirm', confirmUpdateEmailRouter);
 app.use('/api/v1/confirm', confirmResetPasswordRouter);
 // ---
 app.use('/api/v1/stores', storeRouter);
-app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/admins', adminRouter);
 app.use('/api/v1/addresses', addressRouter);
 app.use('/api/v1/cart', cartRouter);
 app.use('/api/v1/', userRouter);
 app.use('/api/v1/shipping-cost', shippingCostRouter);
 app.use('/api/v1/', productRouter);
 app.use('/api/v1/', vouchersRouter);
+app.use('/api/v1/', categoriesRouter);
+app.use('/api/v1/', orderRouter);
+app.use('/api/v1/', discountRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

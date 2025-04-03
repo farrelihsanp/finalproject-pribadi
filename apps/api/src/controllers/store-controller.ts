@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { prisma } from '../configs/prisma.js';
 import cloudinary from '../configs/cloudinary.js';
 import fs from 'node:fs/promises';
+import { getDistance } from 'geolib';
 
 // Create a new store
 export const createStore = async (
@@ -311,7 +312,7 @@ export const getStoreById = async (
     res.status(200).json(store);
   } catch (error) {
     console.error(error);
-    next(error); // Pass the error to the next middleware for centralized error handling
+    next(error);
   }
 };
 
@@ -326,57 +327,60 @@ export const getAllStores = async (
     res.status(200).json(stores);
   } catch (error) {
     console.error(error);
-    next(error); // Pass the error to the next middleware for centralized error handling
+    next(error);
   }
 };
 
-// Get nearest store based on user location
-// export const getNearestStore = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction,
-// ) => {
-//   const { latitude, longitude } = req.query;
+export const getNearestStore = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { latitudeUser, longitudeUser } = req.query;
 
-//   if (!latitude || !longitude) {
-//     res.status(400).json({ message: 'Latitude and longitude are required.' });
-//     return;
-//   }
+  // Validate that latitudeUser and longitudeUser are provided
+  if (!latitudeUser || !longitudeUser) {
+    res.status(400).json({ message: 'Latitude and longitude are required.' });
+    return;
+  }
 
-//   try {
-//     const stores = await prisma.store.findMany({
-//       where: {
-//         isActive: true,
-//       },
-//     });
+  try {
+    const stores = await prisma.store.findMany({
+      where: {
+        isActive: true,
+      },
+    });
 
-//     if (!stores || stores.length === 0) {
-//       res.status(404).json({ message: 'No active stores found.' });
-//       return;
-//     }
+    if (!stores || stores.length === 0) {
+      res.status(404).json({ message: 'No active stores found.' });
+      return;
+    }
 
-//     let nearestStore = stores[0];
-//     let minDistance = getDistance(
-//       { latitude: Number(latitude), longitude: Number(longitude) },
-//       { latitude: nearestStore.latitude, longitude: nearestStore.longitude },
-//     );
+    let nearestStore = stores[0];
+    let minDistance = getDistance(
+      { latitude: Number(latitudeUser), longitude: Number(longitudeUser) },
+      {
+        latitude: nearestStore.latitude,
+        longitude: nearestStore.longitude,
+      },
+    );
 
-//     for (const store of stores) {
-//       const distance = getDistance(
-//         { latitude: Number(latitude), longitude: Number(longitude) },
-//         { latitude: store.latitude, longitude: store.longitude },
-//       );
-//       if (distance < minDistance) {
-//         minDistance = distance;
-//         nearestStore = store;
-//       }
-//     }
+    for (const store of stores) {
+      const distance = getDistance(
+        { latitude: Number(latitudeUser), longitude: Number(longitudeUser) },
+        { latitude: store.latitude, longitude: store.longitude },
+      );
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestStore = store;
+      }
+    }
 
-//     res
-//       .status(200)
-//       .json({ ok: true, message: 'Nearest store found', data: nearestStore });
-//   } catch (error) {
-//     console.error(error);
-//     next(error); // Pass the error to the next middleware for centralized error handling
-//   }
-// };
+    res
+      .status(200)
+      .json({ ok: true, message: 'Nearest store found', data: nearestStore });
+  } catch (error) {
+    console.error(error);
+    next(error);
+  }
+};

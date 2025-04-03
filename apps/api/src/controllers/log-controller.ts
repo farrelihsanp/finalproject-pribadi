@@ -82,7 +82,7 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
   try {
     req.user = null;
     res
-      .clearCookie('token')
+      .clearCookie('accessToken')
       .status(200)
       .json({ message: 'Logout succesfully!' });
   } catch (error) {

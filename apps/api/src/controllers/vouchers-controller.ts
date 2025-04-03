@@ -11,7 +11,6 @@ export const createVoucher = async (
 ) => {
   try {
     const userId = req.user?.id;
-    const storeId = req.params.id;
 
     if (!userId) {
       res.status(400).json({ error: 'User ID is required' });
@@ -31,7 +30,8 @@ export const createVoucher = async (
       isActive,
       minPurchase,
       maxPriceReduction,
-      productIds,
+      productId,
+      storeId,
     } = req.body;
 
     // Validate required fields
@@ -42,27 +42,11 @@ export const createVoucher = async (
       !discountRate ||
       !startDate ||
       !endDate ||
-      !productIds ||
-      !stock
+      !productId ||
+      !stock ||
+      !storeId
     ) {
       res.status(400).json({ error: 'All required fields are required' });
-      return;
-    }
-
-    // Validate productIds against the storeId
-    const productsInStore = await prisma.product.findMany({
-      where: {
-        storeId: Number(storeId),
-        id: { in: productIds.map(Number) },
-      },
-    });
-
-    const validProductIds = productsInStore.map((product) => product.id);
-
-    if (validProductIds.length !== productIds.length) {
-      res.status(400).json({
-        error: 'Some product IDs do not belong to the specified store',
-      });
       return;
     }
 
@@ -101,9 +85,9 @@ export const createVoucher = async (
         maxPriceReduction: Number(maxPriceReduction) || null,
         voucherImage: cloudinaryData.secure_url,
         VoucherProduct: {
-          create: validProductIds.map((productId: number) => ({
+          create: {
             productId: Number(productId),
-          })),
+          },
         },
       },
     });
@@ -128,7 +112,6 @@ export const updateVoucher = async (
   try {
     const userId = req.user?.id;
     const voucherId = Number(req.params.id);
-    const storeId = req.params.id;
 
     if (!userId) {
       res.status(400).json({ error: 'User ID is required' });
@@ -145,18 +128,6 @@ export const updateVoucher = async (
       return;
     }
 
-    // Authorization check: Ensure the user is the owner of the voucher or has admin privileges
-    if (
-      voucher.userId !== userId &&
-      req.user?.role !== 'SUPERADMIN' &&
-      req.user?.role !== 'STOREADMIN'
-    ) {
-      res
-        .status(403)
-        .json({ error: 'You are not authorized to update this voucher' });
-      return;
-    }
-
     const {
       name,
       description,
@@ -170,7 +141,8 @@ export const updateVoucher = async (
       isActive,
       minPurchase,
       maxPriceReduction,
-      productIds,
+      productId,
+      storeId,
     } = req.body;
 
     // Validate required fields
@@ -181,27 +153,11 @@ export const updateVoucher = async (
       !discountRate ||
       !startDate ||
       !endDate ||
-      !productIds ||
-      !stock
+      !productId ||
+      !stock ||
+      !storeId
     ) {
       res.status(400).json({ error: 'All required fields are required' });
-      return;
-    }
-
-    // Validate productIds against the storeId
-    const productsInStore = await prisma.product.findMany({
-      where: {
-        storeId: +storeId,
-        id: { in: productIds.map(Number) },
-      },
-    });
-
-    const validProductIds = productsInStore.map((product) => product.id);
-
-    if (validProductIds.length !== productIds.length) {
-      res.status(400).json({
-        error: 'Some product IDs do not belong to the specified store',
-      });
       return;
     }
 
@@ -223,9 +179,9 @@ export const updateVoucher = async (
       cloudinaryData = { secure_url: voucher.voucherImage }; // Use existing image if no file
     }
 
-    // Prepare data for update
     const updateData = {
       name,
+      storeId: Number(storeId),
       description,
       code,
       voucherType: voucherType,
@@ -238,10 +194,10 @@ export const updateVoucher = async (
       maxPriceReduction: Number(maxPriceReduction) || null,
       voucherImage: cloudinaryData.secure_url,
       VoucherProduct: {
-        deleteMany: {}, // Delete existing VoucherProduct entries
-        create: validProductIds.map((productId: number) => ({
-          productId: Number(productId),
-        })),
+        update: {
+          where: { id: voucherId },
+          data: { productId: Number(productId) },
+        },
       },
     };
 
